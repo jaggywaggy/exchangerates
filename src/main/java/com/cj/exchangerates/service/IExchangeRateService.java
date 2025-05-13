@@ -13,6 +13,6 @@ public interface IExchangeRateService {
      * @param symbols   The symbols.
      * @return          The exchange rates response.
      */
-    public ExchangeRateResponse getExchangeRates(String currency, List<String> symbols);
+    public ExchangeRateResponse getExchangeRates(String base, List<String> symbols);
 
 }

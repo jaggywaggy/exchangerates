@@ -8,24 +8,24 @@ import java.util.Map;
  */
 public class ExchangeRateResponse {
 
-    private String currency;
+    private String base;
     private Map<String, Double> rates;
 
     public ExchangeRateResponse() {
     }
 
-    public ExchangeRateResponse(String currency,
+    public ExchangeRateResponse(String base,
                                 Map<String, Double> rates) {
-        this.currency = currency;
+        this.base = base;
         this.rates = rates;
     }
 
-    public String getCurrency() {
-        return this.currency;
+    public String getBase() {
+        return this.base;
     }
 
-    public void setCurrency(String currency) {
-        this.currency = currency;
+    public void setBase(String base) {
+        this.base = base;
     }
 
     public Map<String, Double> getRates() {

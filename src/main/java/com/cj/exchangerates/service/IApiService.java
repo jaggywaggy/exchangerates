@@ -8,9 +8,9 @@ import com.cj.exchangerates.model.ExchangeRateResponse;
 public interface IApiService {
     /**
      * Fetch all rates from both API sources.
-     * @param currency  The currency.
+     * @param base  	The base.
      * @param symbols   The symbols.
      * @return          The rates mapped by rate source.
      */
-    public Map<String, ExchangeRateResponse> fetchAllRates(String currency, List<String> symbols);
+    public Map<String, ExchangeRateResponse> fetchAllRates(String base, List<String> symbols);
 }

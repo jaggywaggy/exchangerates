@@ -3,8 +3,6 @@ package com.cj.exchangerates.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -28,10 +26,10 @@ public class ApiService implements IApiService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Override
-    public Map<String, ExchangeRateResponse> fetchAllRates(String currency, List<String> symbols) {
+    public Map<String, ExchangeRateResponse> fetchAllRates(String base, List<String> symbols) {
         final Map<String, ExchangeRateResponse> allRates = new HashMap<>();
-        allRates.put("frankfurter", fetchFrankfurter(currency, symbols));
-        allRates.put("fawaz", fetchFawaz(currency, symbols));
+        allRates.put("frankfurter", fetchFrankfurter(base, symbols));
+        allRates.put("fawaz", fetchFawaz(base, symbols));
         return allRates;
     }
     
@@ -39,9 +37,9 @@ public class ApiService implements IApiService {
      * Fetch current rates from Frankfurter.
      * 
      */
-    private ExchangeRateResponse fetchFrankfurter(String currency, List<String> symbols) {
+    private ExchangeRateResponse fetchFrankfurter(String base, List<String> symbols) {
         final String url = UriComponentsBuilder.fromUriString("https://api.frankfurter.app/latest")
-                                               .queryParam("from", currency)
+                                               .queryParam("from", base)
                                                .queryParam("to", String.join(",", symbols))
                                                .toUriString();
 
@@ -50,15 +48,19 @@ public class ApiService implements IApiService {
         // GET request.
         @SuppressWarnings("unchecked")
         final Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-        final Object ratesObj = response.get("rates");
-        
+
+        if(response == null) {
+        	return null;
+        }
+
         _metricsService.incrementResponse("frankfurter");
 
+        final Object ratesObj = response.get("rates");
         // Check our response (mapped by rates)
         if(ratesObj instanceof Map<?, ?>) {
             final Map<String, Double> rates = _objectMapper.convertValue(ratesObj, new TypeReference<Map<String, Double>>() {});
             if(rates != null && !rates.isEmpty()) {
-                return new ExchangeRateResponse(currency, rates);
+                return new ExchangeRateResponse(base, rates);
             }
         }
 
@@ -69,33 +71,36 @@ public class ApiService implements IApiService {
      * Fetch current rates from fawazahmed0.
      * 
      */
-    private ExchangeRateResponse fetchFawaz(String currency, List<String> symbols) {
-        // One request per symbol so lets run this in parallel.
-        final Map<String, Double> rates = symbols.parallelStream().map(symbol -> {
-            final String url = String.format("https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@1/latest/currencies/%s/%s.json", currency.toLowerCase(), symbol.toLowerCase());
-            
-            _metricsService.incrementRequest("fawaz");
+    private ExchangeRateResponse fetchFawaz(String base, List<String> symbols) {
+		final String url = String.format("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/%s.json", base.toLowerCase());            
 
-            // GET request.
-            @SuppressWarnings("unchecked")
-            final Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+		_metricsService.incrementRequest("fawaz");
 
-            _metricsService.incrementResponse("fawaz");
+		// GET request.
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = restTemplate.getForObject(url, Map.class);
 
-            // Check our response (mapped by symbol).
-            if(response != null && response.containsKey(symbol.toLowerCase())) {
-                final Object rateObj = response.get(symbol.toLowerCase());
-                if(rateObj instanceof Number) {
-                    final Number rateNum = (Number)rateObj;
-                    return Map.entry(symbol.toUpperCase(), rateNum.doubleValue());
-                }
-            }
-            return null;
-        }).filter(Objects::nonNull).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-        if(rates != null && !rates.isEmpty()) {
-            return new ExchangeRateResponse(currency.toUpperCase(), rates);
+        if(response == null || !response.containsKey(base.toLowerCase())) {
+        	return null;
         }
+
+		_metricsService.incrementResponse("fawaz");
+		
+		// Grab our exchange rates.
+		final Map<String, Double> rates = new HashMap<>();
+		final Object nestedRates = response.get(base.toLowerCase());
+		if(nestedRates instanceof Map<?, ?> ratesObjMap) {
+			for(String symbol : symbols) {
+				final Object ratesObj = ratesObjMap.get(symbol.toLowerCase());
+				if(ratesObj instanceof Number result) {
+					rates.put(symbol.toUpperCase(), result.doubleValue());
+				}
+			}
+		}
+		
+		if(!rates.isEmpty()) {
+			return new ExchangeRateResponse(base.toUpperCase(), rates);
+		}
 
         return null;
     }

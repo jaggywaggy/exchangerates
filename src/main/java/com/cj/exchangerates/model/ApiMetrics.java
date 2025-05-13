@@ -1,5 +1,9 @@
 package com.cj.exchangerates.model;
 
+/**
+ * A class responsible for tracking metrics for total requests and responses.
+ * 
+ */
 public class ApiMetrics {
     private int totalRequests;
     private int totalResponses;

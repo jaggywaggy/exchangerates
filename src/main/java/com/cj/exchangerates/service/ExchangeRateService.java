@@ -25,12 +25,11 @@ public class ExchangeRateService implements IExchangeRateService {
 	private final Map<String, ExchangeRateResponse> _cache = new ConcurrentHashMap<>();
 
 	@Override
-	public ExchangeRateResponse getExchangeRates(String currency, List<String> symbols) {
-	    if(currency == null || currency.isEmpty()) {
-	        throw new IllegalArgumentException("Currency must be provided");
+	public ExchangeRateResponse getExchangeRates(String base, List<String> symbols) {
+	    if(base == null || base.isEmpty()) {
+	        throw new IllegalArgumentException("Base must be provided");
 	    }
 	    if(symbols == null || symbols.isEmpty()) {
-	        // TODO: Do we actually need them?
 	        throw new IllegalArgumentException("Symbols must be provided");
 	    }
 	    
@@ -38,12 +37,12 @@ public class ExchangeRateService implements IExchangeRateService {
 	    _metricsService.incrementTotalQueries();
 	    
 	    // Generate a key for caching.
-	    final String cacheKey = createCacheKey(currency, symbols);
+	    final String cacheKey = createCacheKey(base, symbols);
 	    if(_cache.containsKey(cacheKey)) {
 	        return _cache.get(cacheKey);
 	    }
 	    
-	    final Map<String, ExchangeRateResponse> allRates = _apiService.fetchAllRates(currency, symbols);
+	    final Map<String, ExchangeRateResponse> allRates = _apiService.fetchAllRates(base, symbols);
 	    final Map<String, List<Double>> combinedRates = new HashMap<>();
 	    
 	    // Do a pass through, combining our response rates from all API
@@ -68,15 +67,15 @@ public class ExchangeRateService implements IExchangeRateService {
 	        averagedRates.put(entry.getKey(), average);    
 	    }
 
-	    final ExchangeRateResponse result = new ExchangeRateResponse(currency.toUpperCase(), averagedRates);
+	    final ExchangeRateResponse result = new ExchangeRateResponse(base.toUpperCase(), averagedRates);
 	    _cache.put(cacheKey, result);
 	    return result;
     }
 	
-    private String createCacheKey(String currency, List<String> symbols) {
+    private String createCacheKey(String base, List<String> symbols) {
 	    final List<String> sorted = new ArrayList<>(symbols);
 	    Collections.sort(sorted);
-	    return currency + "|" + String.join(",", sorted).toUpperCase();
+	    return base + "|" + String.join(",", sorted).toUpperCase();
 	}
 
 }

@@ -1,6 +1,7 @@
 package com.cj.exchangerates.service;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,13 +38,13 @@ public class MetricsService implements IMetricsService {
 
     @Override
     public MetricsSnapshot getSnapshot() {
-        final Map<String, ApiMetrics> metrics = new HashMap<>();
-        for(String name : _requests.keySet()) {
-            metrics.put(name, new ApiMetrics(_requests.get(name).get(), _responses.getOrDefault(name, new AtomicInteger()).get()));
+    	final List<MetricsSnapshot.ApiMetricsWithName> metricsList = new ArrayList<>();
+        for (String name : _requests.keySet()) {
+            final int requests = _requests.get(name).get();
+            final int responses = _responses.getOrDefault(name, new AtomicInteger()).get();
+            final ApiMetrics metrics = new ApiMetrics(requests, responses);
+            metricsList.add(new MetricsSnapshot.ApiMetricsWithName(name, metrics));
         }
-        if(metrics != null && !metrics.isEmpty()) {
-            return new MetricsSnapshot(_totalQueries.get(), metrics);
-        }
-        return new MetricsSnapshot();
+        return new MetricsSnapshot(_totalQueries.get(), metricsList);
     }
 }

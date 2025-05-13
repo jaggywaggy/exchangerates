@@ -32,27 +32,76 @@ public class ExchangeRateServiceTests {
     void init() {
         MockitoAnnotations.openMocks(this);
     }
+    
+    @Test
+    void testGetExchangeRates() {
+        final List<String> symbols = List.of("USD", "NZD");
+        final String base = "EUR";
+        
+        // Mock.
+        final Map<String, ExchangeRateResponse> mockRates = new HashMap<>();
+        mockRates.put("frankfurter", new ExchangeRateResponse(base, new HashMap<>()));
+        mockRates.put("fawaz", new ExchangeRateResponse(base, Map.of("USD", 1.2, "NZD", 1.7)));
+        when(_apiService.fetchAllRates(base, symbols)).thenReturn(mockRates);
+
+        final ExchangeRateResponse response = _service.getExchangeRates(base, symbols);
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(1.2, response.getRates().get("USD"), 0.0001);
+        Assertions.assertEquals(1.7, response.getRates().get("NZD"), 0.0001);
+    }
 
     @Test
     void testCachedResult() {
         final List<String> symbols = List.of("USD", "NZD");
-        final String currency = "EUR";
+        final String base = "EUR";
         
+        // Mock.
         final Map<String, ExchangeRateResponse> mockRates = new HashMap<>();
-        mockRates.put("frankfurter", new ExchangeRateResponse(currency, Map.of("USD", 1.0, "NZD", 1.5)));
-        mockRates.put("fawaz", new ExchangeRateResponse(currency, Map.of("USD", 1.2, "NZD", 1.7)));
-        when(_apiService.fetchAllRates(currency, symbols)).thenReturn(mockRates);
+        mockRates.put("frankfurter", new ExchangeRateResponse(base, Map.of("USD", 1.0, "NZD", 1.5)));
+        mockRates.put("fawaz", new ExchangeRateResponse(base, Map.of("USD", 1.2, "NZD", 1.7)));
+        when(_apiService.fetchAllRates(base, symbols)).thenReturn(mockRates);
 
         // First call will load our data into our cache.
-        final ExchangeRateResponse first = _service.getExchangeRates(currency, symbols);
+        final ExchangeRateResponse first = _service.getExchangeRates(base, symbols);
+        Assertions.assertNotNull(first);
         Assertions.assertEquals(1.1, first.getRates().get("USD"), 0.0001);
 
         // Second call will load our data from the cache directly.
-        final ExchangeRateResponse second = _service.getExchangeRates(currency, symbols);
+        final ExchangeRateResponse second = _service.getExchangeRates(base, symbols);
+        Assertions.assertNotNull(second);
         Assertions.assertEquals(first, second);
 
         // We should have only called fetchAllRates once as the second getExchangeRates
         // call should have returned our cached data.
-        verify(_apiService, times(1)).fetchAllRates(currency, symbols);
+        verify(_apiService, times(1)).fetchAllRates(base, symbols);
+    }
+    
+    @Test
+    void testAveraging() {
+    	final List<String> symbols = List.of("USD", "NZD");
+    	final String base = "EUR";
+    	
+    	// Mock.
+        final Map<String, ExchangeRateResponse> mockRates = new HashMap<>();
+        mockRates.put("frankfurter", new ExchangeRateResponse(base, Map.of("USD", 1.0, "NZD", 1.5)));
+        mockRates.put("fawaz", new ExchangeRateResponse(base, Map.of("USD", 1.2, "NZD", 1.7)));
+        when(_apiService.fetchAllRates(base, symbols)).thenReturn(mockRates);
+        
+        final ExchangeRateResponse response = _service.getExchangeRates(base, symbols);
+        
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals("EUR", response.getBase());
+        Assertions.assertEquals(1.1, response.getRates().get("USD"), 0.0001);
+        Assertions.assertEquals(1.6, response.getRates().get("NZD"), 0.0001);
+
+        verify(_metricsService).incrementTotalQueries();
+    }
+    
+    @Test
+    void testValidation() {
+    	// Missing base.
+    	Assertions.assertThrows(IllegalArgumentException.class, () -> _service.getExchangeRates(null, List.of("USD", "NZD")));
+    	// Missing symbols.
+    	Assertions.assertThrows(IllegalArgumentException.class, () -> _service.getExchangeRates("EUR", null));
     }
 }
