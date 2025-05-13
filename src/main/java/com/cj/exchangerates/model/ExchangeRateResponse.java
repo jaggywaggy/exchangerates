@@ -14,7 +14,10 @@ public class ExchangeRateResponse {
     public ExchangeRateResponse() {
     }
 
-    public ExchangeRateResponse(String currency, Map<String, Double> rates) {
+    public ExchangeRateResponse(String currency,
+                                Map<String, Double> rates) {
+        this.currency = currency;
+        this.rates = rates;
     }
 
     public String getCurrency() {
