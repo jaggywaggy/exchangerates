@@ -22,6 +22,7 @@ Tests
 
 Improvements
 
+    - Add DTOs for API call objects to deserialise into.
     - Add controller and integration tests. (`@WebMvcTest`)
     - Implement fallback providers in case one API is down
     - Add some form of cache refreshing for up to date rates.
