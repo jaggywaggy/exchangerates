@@ -1,0 +1,16 @@
+# Gradle
+/build
+.gradle
+!gradle/wrapper/gradle-wrapper.jar
+
+# Compiled class files
+*.class
+
+# IDEs
+/.idea
+*.iml
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
